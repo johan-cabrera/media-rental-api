@@ -34,13 +34,19 @@ class MediaController extends Controller
         // Filtro por nombre o ubicacion
         if ($request->filled('search')) {
             $search = $request->input('search');
-            $query  ->where(function ($q) use ($search) {
-                $q  ->where('name', 'like', "%{$search}%")
-                    ->orWhere('location', 'like', "%{$search}%");
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                ->orWhere('location', 'like', "%{$search}%");
             });
         }
 
-        // Paginacion con 10 elementos por pagina 
+        // Si se solicita, retornar registros sin paginar
+        if ($request->boolean('all')) {
+            $media = $query->latest('id')->get();
+            return MediaResource::collection($media);
+        }
+
+        // Paginacion 
         $media = $query->latest('id')->paginate(10);
 
         return MediaResource::collection($media);

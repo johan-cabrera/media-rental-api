@@ -7,15 +7,24 @@ use App\Http\Requests\CustomerStoreRequest;
 use App\Http\Requests\CustomerUpdateRequest;
 use App\Http\Resources\CustomerResource;
 use App\Models\Customer;
+use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class CustomerController extends Controller
 {
     // Listado de clientes con paginado
-    public function index(): AnonymousResourceCollection
+    public function index(Request $request): AnonymousResourceCollection
     {
-        $customers = Customer::latest('id')->paginate(10);
+        $query = Customer::latest('id');
+
+        // Si se solicita, retornar registros sin paginar
+        if ($request->boolean('all')) {
+            return CustomerResource::collection($query->get());
+        }
+
+        // Paginacion 
+        $customers = $query->paginate(10);
 
         return CustomerResource::collection($customers);
     }
