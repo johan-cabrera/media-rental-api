@@ -35,6 +35,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Rutas para bookings
     Route::get('bookings/export', [BookingController::class, 'exportCsv'])->name('bookings.export');
+    Route::get('bookings/calendar', [BookingController::class, 'calendar'])->name('bookings.calendar');
     
     Route::get('bookings', [BookingController::class, 'index'])->name('bookings.index');
     Route::post('bookings', [BookingController::class, 'store'])->name('bookings.store');

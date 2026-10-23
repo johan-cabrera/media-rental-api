@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\BookingStatusUpdateRequest;
 use App\Http\Requests\BookingStoreRequest;
+use App\Http\Requests\CalendarFilterRequest;
 use App\Http\Resources\BookingResource;
 use App\Models\Booking;
 use App\Models\Media;
@@ -169,5 +170,38 @@ class BookingController extends Controller
 
             fclose($handle);
         }, 'reservas_' . date('Y-m-d') . '.csv', $headers);
+    }
+
+    // Listado de reservas por fecha
+    public function calendar(CalendarFilterRequest $request): AnonymousResourceCollection
+    {
+        $validated = $request->validated();
+
+        $query = Booking::with(['media', 'customer']);
+
+        // Filtrar por rango de fechas si vienen en la petición (solapamiento de reservas)
+        if (!empty($validated['start_date']) && !empty($validated['end_date'])) {
+            $query  ->where(function ($q) use ($validated) {
+                $q  ->whereBetween('starts_at', [$validated['start_date'], $validated['end_date']])
+                    ->orWhereBetween('ends_at', [$validated['start_date'], $validated['end_date']])
+                    ->orWhere(function ($sub) use ($validated) {
+                        $sub->where('starts_at', '<=', $validated['start_date'])
+                            ->where('ends_at', '>=', $validated['end_date']);
+                    });
+            });
+        } elseif (!empty($validated['start_date'])) {
+            $query->where('ends_at', '>=', $validated['start_date']);
+        } elseif (!empty($validated['end_date'])) {
+            $query->where('starts_at', '<=', $validated['end_date']);
+        }
+
+        // Filtro opcional por espacio publicitario
+        if (!empty($validated['media_id'])) {
+            $query->where('media_id', $validated['media_id']);
+        }
+
+        $bookings = $query->orderBy('starts_at', 'asc')->get();
+
+        return BookingResource::collection($bookings);
     }
 }
