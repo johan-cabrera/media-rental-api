@@ -12,6 +12,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class BookingController extends Controller
 {
@@ -117,5 +118,56 @@ class BookingController extends Controller
         return response()->json([
             'message' => 'Reserva eliminada exitosamente.',
         ], 200);
+    }
+
+    // Exportar todas las reservas en un CSV
+    public function exportCsv(): StreamedResponse
+    {
+        $headers = [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="reservas_' . date('Y-m-d') . '.csv"',
+        ];
+
+        return response()->streamDownload(function () {
+            $handle = fopen('php://output', 'w');
+
+            // formato para caracteres especiales
+            fputs($handle, "\xEF\xBB\xBF");
+
+            // Cabeceras del archivo csv 
+            fputcsv($handle, [
+                'ID',
+                'Espacio Publicitario',
+                'Tipo',
+                'Cliente',
+                'Correo Cliente',
+                'Fecha Inicio',
+                'Fecha Fin',
+                'Total ($)',
+                'Estado',
+                'Fecha Creación',
+            ], ',');
+
+            // Carga de registros
+            Booking::with(['media', 'customer'])
+                ->latest('id')
+                ->lazy(100)
+                ->each(function ($booking) use ($handle) {
+                    fputcsv($handle, [
+                        $booking->id,
+                        $booking->media?->name ?? 'N/A',
+                        $booking->media?->type ?? 'N/A',
+                        $booking->customer?->name ?? 'N/A',
+                        $booking->customer?->email ?? 'N/A',
+                        $booking->starts_at,
+                        $booking->ends_at,
+                        number_format($booking->total_price, 2, '.', ''),
+                        $booking->status,
+                        $booking->created_at?->format('Y-m-d H:i') ?? '',
+                    ], ',');
+                });
+
+            fclose($handle);
+        }, 'reservas_' . date('Y-m-d') . '.csv', $headers);
     }
 }

@@ -34,6 +34,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('customers/{customer}', [CustomerController::class, 'destroy'])->name('customers.destroy');
 
     // Rutas para bookings
+    Route::get('bookings/export', [BookingController::class, 'exportCsv'])->name('bookings.export');
+    
     Route::get('bookings', [BookingController::class, 'index'])->name('bookings.index');
     Route::post('bookings', [BookingController::class, 'store'])->name('bookings.store');
     Route::get('bookings/{booking}', [BookingController::class, 'show'])->name('bookings.show');
